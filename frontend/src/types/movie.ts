@@ -18,7 +18,6 @@ export interface Movie {
   director?: string;
   releaseYear?: number;
   plot?: string;
-  script?: string;
   trailerUrl?: string;
   posterUrl?: string;
   rating?: number;
@@ -53,7 +52,6 @@ export interface CreateMovieDTO {
   director?: string;
   releaseYear?: number;
   plot?: string;
-  script?: string;
   trailerUrl?: string;
   posterUrl?: string;
   rating?: number;

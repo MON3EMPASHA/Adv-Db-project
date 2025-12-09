@@ -10,7 +10,6 @@ export interface CreateMovieDTO {
   director?: string;
   releaseYear?: number;
   plot?: string;
-  script?: string;
   trailerUrl?: string;
   posterUrl?: string;
   rating?: number;
@@ -57,7 +56,7 @@ export const searchMoviesByEmbedding = async (
   embedding: number[],
   limit = 10,
 ): Promise<{ movie: MovieDocument; score: number }[]> => {
-  const matches = await semanticSearch(embedding, limit);
+  const matches = await semanticSearch(embedding, limit * 2); // Get more matches to account for duplicates
   
   if (matches.length === 0) {
     return [];
@@ -80,17 +79,29 @@ export const searchMoviesByEmbedding = async (
     }
   });
 
-  return matches
-    .map((match) => {
-      const movieId = String(match.payload.movieId);
-      const movie = movieMap.get(movieId);
-      if (!movie) {
-        logger.warn(`Movie not found for ID: ${movieId}`);
-        return null;
-      }
-      return { movie, score: match.score };
-    })
-    .filter(Boolean) as { movie: MovieDocument; score: number }[];
+  // Map matches to movies and deduplicate by movie ID
+  // If a movie appears multiple times (different embeddings), keep the highest score
+  const movieScoreMap = new Map<string, { movie: MovieDocument; score: number }>();
+  
+  matches.forEach((match) => {
+    const movieId = String(match.payload.movieId);
+    const movie = movieMap.get(movieId);
+    if (!movie) {
+      logger.warn(`Movie not found for ID: ${movieId}`);
+      return;
+    }
+    
+    const existing = movieScoreMap.get(movieId);
+    // Keep the match with the highest score if movie appears multiple times
+    if (!existing || match.score > existing.score) {
+      movieScoreMap.set(movieId, { movie, score: match.score });
+    }
+  });
+
+  // Convert map to array, sort by score (descending), and limit
+  return Array.from(movieScoreMap.values())
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
 };
 
 export const getAllMovies = async (
@@ -122,7 +133,34 @@ export const updateMovie = async (
   if (!Types.ObjectId.isValid(id)) {
     return null;
   }
-  return MovieModel.findByIdAndUpdate(id, { $set: payload }, { new: true });
+  const updatedMovie = await MovieModel.findByIdAndUpdate(
+    id,
+    { $set: payload },
+    { new: true }
+  );
+  
+  // Import here to avoid circular dependency
+  if (updatedMovie) {
+    const { regenerateMovieEmbeddings } = await import('./ingestionService');
+    // Regenerate embeddings based on the final updated movie state
+    // Pass the full updated movie payload to regenerate all relevant embeddings
+    const embeddingPayload = {
+      title: updatedMovie.title,
+      plot: updatedMovie.plot,
+      genres: updatedMovie.genres,
+      metadata: updatedMovie.metadata,
+      ...payload, // Override with any explicitly updated fields
+    };
+    // Regenerate embeddings asynchronously (don't await to avoid blocking the update response)
+    regenerateMovieEmbeddings(id, embeddingPayload).catch((error) => {
+      logger.error(
+        `Background embedding regeneration failed for movie ${id}:`,
+        error
+      );
+    });
+  }
+  
+  return updatedMovie;
 };
 
 export const deleteMovie = async (id: string): Promise<boolean> => {

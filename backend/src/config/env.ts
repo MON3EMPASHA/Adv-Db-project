@@ -8,13 +8,10 @@ const envSchema = z.object({
   NODE_ENV: z.string().default("development"),
   PORT: z.string().default("4000"),
   MONGODB_URI: z.string().url(),
-  // Embedding options (use one)
-  HUGGINGFACE_API_KEY: z.string().optional(), // Free tier available
-  EMBEDDING_SERVICE_URL: z.string().url().optional(),
-  EMBEDDING_MODEL: z.string().default("sentence-transformers/all-MiniLM-L6-v2"), // Free HF model
-  EMBEDDING_PROVIDER: z
-    .enum(["", "huggingface", "service"])
-    .default("huggingface"),
+  // Embedding options - using local transformers.js
+  EMBEDDING_MODEL: z
+    .string()
+    .default("sentence-transformers/all-MiniLM-L6-v2"), // Local model using transformers.js (384 dims)
   // Vector DB options (use one)
   VECTOR_DB_PROVIDER: z
     .enum(["qdrant", "pinecone", "chroma"])

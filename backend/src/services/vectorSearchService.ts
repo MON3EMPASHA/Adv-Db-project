@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { Pinecone } from '@pinecone-database/pinecone';
 import axios from 'axios';
+import { createHash } from 'crypto';
 
 export type EmbeddingRecord = Record<string, number[]>;
 
@@ -26,6 +27,22 @@ const isChroma = (client: unknown): client is ChromaClient => {
   return (client as { baseUrl?: string; collection?: string }).baseUrl !== undefined;
 };
 
+/**
+ * Convert a string ID to a numeric ID for Qdrant
+ * Uses a hash function to deterministically convert strings to numbers
+ */
+const stringToNumericId = (str: string): number => {
+  const hash = createHash('sha256').update(str).digest();
+  // Take first 8 bytes and convert to unsigned integer
+  // Use BigInt to handle large numbers, then convert to Number
+  // We use the absolute value and take modulo to ensure it fits in safe integer range
+  const bigInt = hash.readBigUInt64BE(0);
+  // Convert to number, taking modulo to fit in JavaScript's safe integer range
+  // Qdrant accepts u64, but JavaScript Number can safely handle up to 2^53-1
+  const numericId = Number(bigInt % BigInt(Number.MAX_SAFE_INTEGER));
+  return numericId;
+};
+
 export const upsertMovieEmbeddings = async (
   movieId: string,
   embeddings: EmbeddingRecord,
@@ -37,14 +54,19 @@ export const upsertMovieEmbeddings = async (
   }
 
   if (isQdrant(client)) {
-    const points = Object.entries(embeddings).map(([source, vector]) => ({
-      id: `${movieId}:${source}`,
-      vector,
-      payload: {
-        movieId,
-        source,
-      },
-    }));
+    const points = Object.entries(embeddings).map(([source, vector]) => {
+      const stringId = `${movieId}:${source}`;
+      const numericId = stringToNumericId(stringId);
+      return {
+        id: numericId,
+        vector,
+        payload: {
+          movieId,
+          source,
+          originalId: stringId, // Store original ID in payload for reference
+        },
+      };
+    });
 
     await client.upsert(env.VECTOR_COLLECTION, {
       wait: true,
@@ -53,7 +75,8 @@ export const upsertMovieEmbeddings = async (
 
     logger.info(`Upserted ${points.length} embeddings for movie ${movieId} to Qdrant`);
     return points.reduce<Record<string, string>>((acc, point) => {
-      acc[point.payload.source as string] = point.id as string;
+      const source = point.payload.source as string;
+      acc[source] = String(point.id); // Return numeric ID as string for consistency
       return acc;
     }, {});
   }

@@ -117,9 +117,9 @@ export default function Home() {
               </p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
-                {movies.map((movie) => (
+                {movies.map((movie, index) => (
                   <MovieCard
-                    key={movie.id}
+                    key={`movie-${movie.id}-${index}`}
                     movie={movie}
                     onSelect={handleSelectMovie}
                     isActive={selectedMovie?.id === movie.id}
@@ -155,9 +155,9 @@ export default function Home() {
                   </p>
                 ) : (
                   <ul className="space-y-3">
-                    {similar.map((movie) => (
+                    {similar.map((movie, index) => (
                       <li
-                        key={movie.id}
+                        key={`similar-${movie.id}-${index}`}
                         className="rounded-xl border border-white/10 bg-black/20 p-3"
                       >
                         <p className="font-medium">{movie.title}</p>

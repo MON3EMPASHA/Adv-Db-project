@@ -20,7 +20,6 @@ const ingestionSchema = z.object({
   director: z.string().optional(),
   releaseYear: z.number().int().optional(),
   plot: z.string().optional(),
-  script: z.string().optional(),
   trailerUrl: urlOrEmpty,
   posterUrl: urlOrEmpty,
   rating: z.number().min(0).max(10).optional(),
@@ -133,9 +132,9 @@ export const getSimilarMoviesHandler = asyncHandler(async (req: Request, res) =>
     return res.status(404).json({ message: 'Movie not found' });
   }
 
-  const baseText = movie.plot ?? movie.script;
+  const baseText = movie.plot;
   if (!baseText) {
-    return res.status(400).json({ message: 'Movie is missing textual content for similarity search' });
+    return res.status(400).json({ message: 'Movie is missing plot description for similarity search' });
   }
 
   const embedding = await generateEmbedding(baseText);
@@ -183,7 +182,6 @@ const updateSchema = z.object({
   director: z.string().optional(),
   releaseYear: z.number().int().optional(),
   plot: z.string().optional(),
-  script: z.string().optional(),
   trailerUrl: urlOrEmpty,
   posterUrl: urlOrEmpty,
   rating: z.number().min(0).max(10).optional(),

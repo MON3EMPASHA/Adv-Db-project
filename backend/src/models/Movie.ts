@@ -7,15 +7,14 @@ export interface MovieDocument extends Document {
   director?: string;
   releaseYear?: number;
   plot?: string;
-  script?: string;
   trailerUrl?: string;
   posterUrl?: string;
   rating?: number;
   metadata?: Record<string, unknown>;
   embeddingKeys: {
+    title?: string;
     plot?: string;
-    script?: string;
-    trailer?: string;
+    genre?: string;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -29,15 +28,14 @@ const movieSchema = new Schema<MovieDocument>(
     director: { type: String },
     releaseYear: { type: Number },
     plot: { type: String },
-    script: { type: String },
     trailerUrl: { type: String },
     posterUrl: { type: String },
     rating: { type: Number },
     metadata: { type: Schema.Types.Mixed },
     embeddingKeys: {
+      title: { type: String },
       plot: { type: String },
-      script: { type: String },
-      trailer: { type: String },
+      genre: { type: String },
     },
   },
   {
@@ -45,8 +43,7 @@ const movieSchema = new Schema<MovieDocument>(
   }
 );
 
-movieSchema.index({ title: "text", plot: "text", script: "text" });
+movieSchema.index({ title: "text", plot: "text" });
 movieSchema.index({ genres: 1, releaseYear: -1 });
 
 export const MovieModel = model<MovieDocument>("Movie", movieSchema);
-

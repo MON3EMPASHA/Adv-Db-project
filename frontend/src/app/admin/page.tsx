@@ -19,7 +19,6 @@ export default function AdminPage() {
     director: '',
     releaseYear: undefined,
     plot: '',
-    script: '',
     trailerUrl: '',
     posterUrl: '',
     rating: undefined,
@@ -56,7 +55,6 @@ export default function AdminPage() {
         director: formData.director,
         releaseYear: formData.releaseYear,
         plot: formData.plot,
-        script: formData.script,
         trailerUrl: formData.trailerUrl,
         posterUrl: formData.posterUrl,
         rating: formData.rating,
@@ -77,7 +75,6 @@ export default function AdminPage() {
         director: '',
         releaseYear: undefined,
         plot: '',
-        script: '',
         trailerUrl: '',
         posterUrl: '',
         rating: undefined,
@@ -105,7 +102,6 @@ export default function AdminPage() {
         director: movie.director,
         releaseYear: movie.releaseYear,
         plot: movie.plot,
-        script: movie.script,
         trailerUrl: movie.trailerUrl,
         posterUrl: movie.posterUrl,
         rating: movie.rating,
@@ -298,9 +294,9 @@ export default function AdminPage() {
             ) : (
               <>
                 <div className="grid gap-4">
-                  {movies.map((movie) => (
+                  {movies.map((movie, index) => (
                     <div
-                      key={movie.id || movie._id || `movie-${movie.title}-${movie.releaseYear}`}
+                      key={`admin-movie-${movie.id || movie._id || index}-${index}`}
                       className="flex gap-4 rounded-xl border border-white/10 bg-white/5 p-4"
                     >
                       {movie.posterUrl && (
